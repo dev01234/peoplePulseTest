@@ -194,26 +194,27 @@ export default function ResourceForm() {
     const updatedData = { ...formData };
 
     if (section === "personal") {
-      // Extract personal and professional data from the combined form
-      const { 
-        domainID, domainRoleID, domainLevelID, overallExperience, cwfid, 
-        officialEmailID, laptopProviderID, assetAssignedDate, assetModelNo, 
-        assetSerialNo, poNo, poDate, lastWorkingDate, attendanceRequired,
-        ...personalData 
-      } = data;
-      
-      // Update personal data
       updatedData.personal = {
-        ...personalData,
+        ...data,
         resourceInformationID: resourceInfo.id,
         id: resourceInfo.personal?.id || 0
       };
-      
-      // Update professional data
+
       updatedData.professional = {
-        domainID, domainRoleID, domainLevelID, overallExperience, cwfid,
-        officialEmailID, laptopProviderID, assetAssignedDate, assetModelNo,
-        assetSerialNo, poNo, poDate, lastWorkingDate, attendanceRequired,
+        domainID: data.domainID,
+        domainRoleID: data.domainRoleID,
+        domainLevelID: data.domainLevelID,
+        overallExperience: data.overallExperience,
+        cwfid: data.cwfid,
+        officialEmailID: data.officialEmailID,
+        laptopProviderID: data.laptopProviderID,
+        assetAssignedDate: data.assetAssignedDate,
+        assetModelNo: data.assetModelNo,
+        assetSerialNo: data.assetSerialNo,
+        poNo: data.poNo,
+        poDate: data.poDate,
+        lastWorkingDate: data.lastWorkingDate,
+        attendanceRequired: data.attendanceRequired,
         resourceInformationID: resourceInfo.id,
         id: resourceInfo.professional?.id || 0
       };
@@ -248,9 +249,12 @@ export default function ResourceForm() {
 
     try {
       await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
-      toast.success("Details saved successfully");
+      toast.success("Personal and professional details saved successfully");
       // Update hasData state after successful save
       setHasData(prev => ({ ...prev, [section]: true }));
+      if (section === "personal") {
+        setHasData(prev => ({ ...prev, professional: true }));
+      }
     } catch (error) {
       console.error("Error saving details:", error);
       toast.error("Error while saving details");
