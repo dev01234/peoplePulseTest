@@ -191,16 +191,29 @@ export default function ResourceForm() {
       return;
     }
 
-    const updatedData = { ...formData };
+    // Create a copy of the current form data
+    let updatedData = { ...formData };
 
     if (section === "personal") {
-      updatedData.personal = {
-        ...data,
+      // Extract personal and professional data from the combined form
+      const personalData = {
+        isActive: data.isActive,
+        joiningDate: data.joiningDate,
+        gender: data.gender,
+        dateOfBirth: data.dateOfBirth,
+        officialMailingAddress: data.officialMailingAddress,
+        pincode: data.pincode,
+        stateID: data.stateID,
+        hometownAddress: data.hometownAddress,
+        alternateContactNumber: data.alternateContactNumber,
+        emergencyContactNumber: data.emergencyContactNumber,
+        fathersName: data.fathersName,
+        mothersName: data.mothersName,
         resourceInformationID: resourceInfo.id,
         id: resourceInfo.personal?.id || 0
       };
-
-      updatedData.professional = {
+      
+      const professionalData = {
         domainID: data.domainID,
         domainRoleID: data.domainRoleID,
         domainLevelID: data.domainLevelID,
@@ -217,6 +230,13 @@ export default function ResourceForm() {
         attendanceRequired: data.attendanceRequired,
         resourceInformationID: resourceInfo.id,
         id: resourceInfo.professional?.id || 0
+      };
+      
+      // Update the form data with the separated personal and professional data
+      updatedData = {
+        ...updatedData,
+        personal: personalData,
+        professional: professionalData
       };
     } else if (section === "academic") {
       updatedData.academic = data.map((item: any) => ({
@@ -250,10 +270,18 @@ export default function ResourceForm() {
     try {
       await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
       toast.success("Personal and professional details saved successfully");
-      // Update hasData state after successful save
-      setHasData(prev => ({ ...prev, [section]: true }));
+      
       if (section === "personal") {
+        // Update both personal and professional hasData states
+        setHasData(prev => ({ ...prev, [section]: true }));
         setHasData(prev => ({ ...prev, professional: true }));
+        
+        // Update both personal and professional validation states
+        setFormValidation(prev => ({ ...prev, [section]: true }));
+        setFormValidation(prev => ({ ...prev, professional: true }));
+      } else {
+        // For other sections, just update their own state
+        setHasData(prev => ({ ...prev, [section]: true }));
       }
     } catch (error) {
       console.error("Error saving details:", error);
