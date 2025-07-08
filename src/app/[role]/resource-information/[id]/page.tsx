@@ -194,9 +194,29 @@ export default function ResourceForm() {
     const updatedData = { ...formData };
 
     if (section === "personal") {
-      // Now we're handling both personal and professional data
-      updatedData.personal = data.personal;
-      updatedData.professional = data.professional;
+      // Extract personal and professional data from the combined form
+      const { 
+        domainID, domainRoleID, domainLevelID, overallExperience, cwfid, 
+        officialEmailID, laptopProviderID, assetAssignedDate, assetModelNo, 
+        assetSerialNo, poNo, poDate, lastWorkingDate, attendanceRequired,
+        ...personalData 
+      } = data;
+      
+      // Update personal data
+      updatedData.personal = {
+        ...personalData,
+        resourceInformationID: resourceInfo.id,
+        id: resourceInfo.personal?.id || 0
+      };
+      
+      // Update professional data
+      updatedData.professional = {
+        domainID, domainRoleID, domainLevelID, overallExperience, cwfid,
+        officialEmailID, laptopProviderID, assetAssignedDate, assetModelNo,
+        assetSerialNo, poNo, poDate, lastWorkingDate, attendanceRequired,
+        resourceInformationID: resourceInfo.id,
+        id: resourceInfo.professional?.id || 0
+      };
     } else if (section === "academic") {
       updatedData.academic = data.map((item: any) => ({
         ...item,
