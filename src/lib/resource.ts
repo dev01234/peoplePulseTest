@@ -29,6 +29,24 @@ export const personalInfoSchema = z.object({
     attendanceRequired: z.boolean(),
 });
 
+export const personalAndProfessionalInfoSchema = personalInfoSchema.extend({
+    // Professional info fields
+    domainID: z.string().min(1, "Domain is required"),
+    domainRoleID: z.string().min(1, "Role is required"),
+    domainLevelID: z.string().min(1, "Level is required"),
+    overallExperience: z.string().min(1, "Overall experience is required"),
+    cwfid: z.string().min(1, "CWF ID is required"),
+    officialEmailID: z.string().email("Invalid email format").min(1, "Official email is required"),
+    laptopProviderID: z.string().min(1, "Laptop provider is required"),
+    assetAssignedDate: z.string().min(1, "Asset assigned date is required"),
+    assetModelNo: z.string().min(1, "Asset model number is required"),
+    assetSerialNo: z.string().min(1, "Asset serial number is required"),
+    poNo: z.string().min(1, "PO number is required"),
+    poDate: z.string().min(1, "PO date is required"),
+    lastWorkingDate: z.string().min(1, "Last working date is required"),
+    attendanceRequired: z.boolean(),
+});
+
 export const academicSchema = z.array(
     z.object({
         name: z.string().min(1, "Academic name is required"),
