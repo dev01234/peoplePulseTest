@@ -22,11 +22,42 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { UsersApi } from "@/services/api/users";
 import api from "@/lib/axiosInstance";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+
+const resignationFormSchema = z.object({
+  laptopHandover: z.boolean().default(false),
+  idCardHandover: z.boolean().default(false),
+  ktNotes: z.string().min(1, "KT handover notes are required"),
+  notes: z.string().optional(),
+});
 
 export default function Home() {
   const { user } = useUserStore();
   const [avatarUrl, setAvatarUrl] = useState("https://github.com/shadcn.png");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const resignationForm = useForm<z.infer<typeof resignationFormSchema>>({
+    resolver: zodResolver(resignationFormSchema),
+    defaultValues: {
+      laptopHandover: false,
+      idCardHandover: false,
+      ktNotes: "",
+      notes: "",
+    },
+  });
 
   const { data: resourceData } = useQuery({
     queryKey: ["resource", user?.id],
@@ -57,30 +88,21 @@ export default function Home() {
     { title: "Document Update", message: "New documentation needs your approval", time: "5h ago" }
   ];
 
-  function handleResignationFormSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    // @ts-ignore
-    const laptopHandover = e.target.laptopHandover.checked;
-    // @ts-ignore
-    const idCardHandover = e.target.idCardHandover.checked;
-    // @ts-ignore
-    const ktNotes = e.target.ktNotes.value;
-    console.log({
-      isLaptopHandedover: laptopHandover,
-      isIDCardHandedover: idCardHandover,
-      ktNotes
-    });
-
+  const handleResignationFormSubmit = async (values: z.infer<typeof resignationFormSchema>) => {
     try {
-      const res = api.post(`/Resignation/${resourceData.resourceId}/assetClearance`, {
-        isLaptopHandedover: laptopHandover,
-        isIDCardHandedover: idCardHandover,
-        ktNotes
+      await api.post(`/Resignation/${resourceData.resourceId}/assetClearance`, {
+        isLaptopHandedover: values.laptopHandover,
+        isIDCardHandedover: values.idCardHandover,
+        ktNotes: values.ktNotes,
+        notes: values.notes,
       });
+      toast.success("Resignation form submitted successfully");
+      resignationForm.reset();
     } catch (error) {
       console.error("Error submitting resignation form:", error);
+      toast.error("Failed to submit resignation form");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen p-8">
@@ -297,46 +319,94 @@ export default function Home() {
                     )}
 
                     {resourceData.status === 6 ? (
-                      // Show the custom form instead of the message
-                      <form
-                        className="space-y-4"
-                        onSubmit={handleResignationFormSubmit}
-                      >
-                        <div className="flex items-center justify-between  gap-2">
-                          <label htmlFor="laptopHandover" className="text-sm font-medium text-gray-700">Laptop Handover</label>
-                          <input
-                            id="laptopHandover"
-                            name="laptopHandover"
-                            type="checkbox"
-                            className="ml-2 accent-blue-600 w-5 h-5"
-                          />
-                        </div>
-                        <div className="flex items-center  justify-between gap-2">
-                          <label htmlFor="idCardHandover" className="text-sm font-medium text-gray-700">ID Card Handover</label>
-                          <input
-                            id="idCardHandover"
-                            name="idCardHandover"
-                            type="checkbox"
-                            className="ml-2 accent-blue-600 w-5 h-5"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="ktNotes" className="text-sm font-medium text-gray-700">KT Handover Notes</label>
-                          <textarea
-                            id="ktNotes"
-                            name="ktNotes"
-                            className="mt-1 block w-full border rounded p-2 text-sm"
-                            rows={6}
-                            placeholder="Enter KT handover notes..."
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      <Form {...resignationForm}>
+                        <form
+                          onSubmit={resignationForm.handleSubmit(handleResignationFormSubmit)}
+                          className="space-y-4"
                         >
-                          Submit
-                        </button>
-                      </form>
+                          <FormField
+                            control={resignationForm.control}
+                            name="laptopHandover"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center justify-between">
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  Laptop Handover
+                                </FormLabel>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={resignationForm.control}
+                            name="idCardHandover"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center justify-between">
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  ID Card Handover
+                                </FormLabel>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={resignationForm.control}
+                            name="ktNotes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  KT Handover Notes *
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    {...field}
+                                    rows={4}
+                                    placeholder="Enter KT handover notes..."
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={resignationForm.control}
+                            name="notes"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  Additional Notes
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    {...field}
+                                    rows={3}
+                                    placeholder="Enter any additional notes..."
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <Button type="submit" className="w-full">
+                            Submit
+                          </Button>
+                        </form>
+                      </Form>
                     ) : (
                       <p>Resigned</p>
                     )}
