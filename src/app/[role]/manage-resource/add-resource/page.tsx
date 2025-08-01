@@ -43,6 +43,7 @@ const AddResource = () => {
     resolver: zodResolver(extendedFormSchema),
     defaultValues: {
       firstName: "",
+      middleName: "",
       lastName: "",
       emailID: "",
       mobileNumber: "",
@@ -82,7 +83,7 @@ const AddResource = () => {
 
   const onSubmit = async (values: z.infer<typeof extendedFormSchema>) => {
     const [password] = values.emailID.split("@");
-    const payload = { ...values, isActive: true, password: password };
+    const payload = { ...values, isActive: true, password: password, status: 0 };
     createResource.mutate(payload);
   };
 
@@ -161,6 +162,21 @@ const AddResource = () => {
                 <FormLabel>First Name *</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter first name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Middle Name Field */}
+          <FormField
+            control={form.control}
+            name="middleName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Middle Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter middle name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

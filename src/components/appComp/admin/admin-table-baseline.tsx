@@ -13,7 +13,7 @@ import AdminSearchUserInput from "../search-input";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import TooltipWrapper from "../../tooltip-swrpper";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../../ui/skeleton";
@@ -80,6 +80,12 @@ const AdminTableBaseline = () => {
 
   const handleDeleteBaseline = (id: number) => {
     deactivateBaseline.mutate(id);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   const handlePageSizeChange = (size: number) => {
@@ -272,6 +278,45 @@ const AdminTableBaseline = () => {
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Showing{" "}
+              <span className="font-medium">
+                {(currentPage - 1) * pageSize + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium">
+                {Math.min(currentPage * pageSize, totalCount)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium">{totalCount}</span>{" "}
+              results
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={!hasPrevious}
+              variant="outline"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={!hasNext}
+              variant="outline"
+              size="sm"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

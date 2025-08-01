@@ -1,15 +1,16 @@
+
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // Define routes that don't require authentication
-const publicRoutes = ['/login', '/favicon.ico', '/api/auth']
+const publicRoutes = ['/login', '/reset-password', '/favicon.ico', '/api/auth']
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('accessToken')
   const { pathname } = request.nextUrl
 
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     pathname === route || pathname.startsWith('/_next') || pathname.startsWith('/public')
   )
 

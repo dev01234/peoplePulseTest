@@ -285,9 +285,11 @@ const AddProject = () => {
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown"
                       selected={field.value}
                       onSelect={field.onChange}
-                      initialFocus
+                      startMonth={new Date(2000, 0)}
+                      endMonth={new Date(2035, 0)}
                     />
                   </PopoverContent>
                 </Popover>
@@ -320,9 +322,11 @@ const AddProject = () => {
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown"
                       selected={field.value}
                       onSelect={field.onChange}
-                      initialFocus
+                      startMonth={new Date(2000, 0)}
+                      endMonth={new Date(2035, 0)}
                     />
                   </PopoverContent>
                 </Popover>

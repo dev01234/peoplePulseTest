@@ -15,7 +15,7 @@ export const supplierContactSchema = z.object({
 
 export const supplierFormSchema = z.object({
   name: z.string().min(1, "Supplier name is required"),
-  sidDate: z.date({ required_error: "SID date is required" }),
+  sidDate: z.string().min(1, "Supplier name is required"),
   address: z.string().min(1, "Address is required"),
   contactNumber: z.string().min(10, { message: "Contact number is required." }),
   stateID: z.number().min(1, "State is required"),

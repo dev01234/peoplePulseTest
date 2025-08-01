@@ -20,7 +20,7 @@ const AdminSearchUserInput: React.FC<Props> = ({ onSearch }) => {
     <div className="w-96 flex flex-col justify-center items-center mb-2 gap-y-2">
       <form className="relative w-11/12" onSubmit={handleSubmit}>
         <Input
-          placeholder="Search users..."
+          placeholder="Search here..."
           className="rounded-full pr-10"
           onChange={handleInputChange}
         />

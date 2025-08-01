@@ -52,7 +52,7 @@ const formSchema = z.object({
   id: z.number().default(0),
   name: z.string().min(1, "Supplier name is required"),
   supplier_Code: z.string().min(1, "Supplier code is required"),
-  sidDate: z.date({ required_error: "SID date is required" }).default(() => new Date()),
+  sidDate: z.string().min(1, "Supplier code is required"),
   address: z.string().min(1, "Address is required"),
   stateID: z.number().min(1, "State is required"),
   contactNumber: z.string().min(10, { message: "Contact number is required." }),
@@ -102,7 +102,7 @@ const EditSupplier = () => {
       id: 0,
       name: "",
       supplier_Code: "",
-      sidDate: new Date(),
+      sidDate: "",
       address: "",
       stateID: 0,
       gst: "",
@@ -128,8 +128,9 @@ const EditSupplier = () => {
         id: supplierData.id,
         name: supplierData.name,
         supplier_Code: supplierData.supplier_Code,
-        sidDate: supplierData.sidDate ? new Date(supplierData.sidDate) : new Date(),
+        sidDate: supplierData.sidDate,
         address: supplierData.address,
+        contactNumber: supplierData.contactNumber || "",
         stateID: supplierData.stateID,
         gst: supplierData.gst,
         pan: supplierData.pan,
@@ -151,7 +152,7 @@ const EditSupplier = () => {
         id: supplier?.id,
         name: supplier?.name,
         supplier_Code: supplier?.supplier_Code,
-        sidDate: supplier?.sidDate ? new Date(supplier?.sidDate) : new Date(),
+        sidDate: supplier?.sidDate,
         address: supplier?.address,
         stateID: supplier?.stateID,
         gst: supplier?.gst,
@@ -282,32 +283,11 @@ const EditSupplier = () => {
             control={form.control}
             name="sidDate"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>SID Date *</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-[240px] pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value != null ? format(new Date(field.value), "PPP") : "Pick a date"}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => field.onChange(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              <FormItem>
+                <FormLabel>SID</FormLabel>
+                <FormControl>
+                  <Input {...field} type="text" placeholder="Enter SID" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

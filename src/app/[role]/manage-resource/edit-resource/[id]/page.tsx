@@ -49,6 +49,7 @@ const EditResource = () => {
     resolver: zodResolver(extendedFormSchema),
     defaultValues: {
       firstName: "",
+      middleName: "",
       lastName: "",
       emailID: "",
       mobileNumber: "",
@@ -144,7 +145,7 @@ const EditResource = () => {
 
   const onSubmit = async (values: z.infer<typeof extendedFormSchema>) => {
     const [password] = values.emailID.split("@");
-    const payload = { ...values, isActive: true, password: password, id: resource.id };
+    const payload = { ...values, isActive: true, password: password, id: resource.id, status: resource.status };
     updateResource.mutate(payload);
   };
 
@@ -202,6 +203,21 @@ const EditResource = () => {
                 <FormLabel>First Name *</FormLabel>
                 <FormControl>
                   <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Middle Name Field */}
+          <FormField
+            control={form.control}
+            name="middleName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Middle Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter middle name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -318,7 +334,7 @@ const EditResource = () => {
             name="rmid"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Relationship Manager</FormLabel>
+                <FormLabel>Reporting Manager</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(Number(value))}
                   value={field.value?.toString() || ""}

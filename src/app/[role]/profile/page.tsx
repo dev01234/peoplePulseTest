@@ -3,11 +3,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Mail, 
-  Briefcase, 
-  Users, 
-  Calendar, 
+import {
+  Mail,
+  Briefcase,
+  Users,
+  Calendar,
   Bell,
   Clock,
   Award,
@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { UsersApi } from "@/services/api/users";
+import api from "@/lib/axiosInstance";
 
 export default function Home() {
   const { user } = useUserStore();
@@ -37,7 +38,7 @@ export default function Home() {
     },
     enabled: !!user?.id,
   });
-  
+
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
@@ -56,6 +57,31 @@ export default function Home() {
     { title: "Document Update", message: "New documentation needs your approval", time: "5h ago" }
   ];
 
+  function handleResignationFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    // @ts-ignore
+    const laptopHandover = e.target.laptopHandover.checked;
+    // @ts-ignore
+    const idCardHandover = e.target.idCardHandover.checked;
+    // @ts-ignore
+    const ktNotes = e.target.ktNotes.value;
+    console.log({
+      isLaptopHandedover: laptopHandover,
+      isIDCardHandedover: idCardHandover,
+      ktNotes
+    });
+
+    try {
+      const res = api.post(`/Resignation/${resourceData.resourceId}/assetClearance`, {
+        isLaptopHandedover: laptopHandover,
+        isIDCardHandedover: idCardHandover,
+        ktNotes
+      });
+    } catch (error) {
+      console.error("Error submitting resignation form:", error);
+    }
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
@@ -66,7 +92,7 @@ export default function Home() {
               <CardHeader className="relative pb-24">
                 {/* Cover Image */}
                 <div className="absolute inset-0 h-32 bg-gradient-to-r from-blue-300 to-blue-500 rounded-t-lg dark:bg-gradient-to-r dark:from-gray-600 dark:to-gray-800" />
-                
+
                 {/* Profile Info */}
                 <div className="relative mt-12 flex items-end space-x-4">
                   <div className="relative group">
@@ -106,7 +132,7 @@ export default function Home() {
                 <div className="space-y-6">
                   {/* <div className="prose max-w-none">
                   </div> */}
-                  
+
                   {/* Work Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                     <div className="flex items-center space-x-3">
@@ -243,8 +269,8 @@ export default function Home() {
                         <span className="text-sm font-medium text-gray-500">{project.name}</span>
                         <Badge variant="outline" className={
                           project.status === 'In Progress' ? 'bg-blue-50 text-blue-700' :
-                          project.status === 'In Review' ? 'bg-yellow-50 text-yellow-700' :
-                          'bg-gray-50 text-gray-700'
+                            project.status === 'In Review' ? 'bg-yellow-50 text-yellow-700' :
+                              'bg-gray-50 text-gray-700'
                         }>
                           {project.status}
                         </Badge>
@@ -257,21 +283,69 @@ export default function Home() {
             </Card>
 
             {/* Resignation Card */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Resignation</h3>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-gray-600">
-                    If you wish to resign from your current role or project, please submit your resignation request below.
-                  </p>
-                  <Button variant="destructive" className="mt-4" asChild>
-                    <Link href={`/${user?.role}/exit-management`}>Resign</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {resourceData?.status && (
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <h3 className="text-lg font-semibold">Resignation {resourceData.status === 6 && (<span className="text-yellow-500">Under Review</span>)} </h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {resourceData.status !== 5 && (
+                      <p className="text-gray-600">
+                        If you wish to resign from your current role or project, please submit your resignation request below.
+                      </p>
+                    )}
+
+                    {resourceData.status === 6 ? (
+                      // Show the custom form instead of the message
+                      <form
+                        className="space-y-4"
+                        onSubmit={handleResignationFormSubmit}
+                      >
+                        <div className="flex items-center justify-between  gap-2">
+                          <label htmlFor="laptopHandover" className="text-sm font-medium text-gray-700">Laptop Handover</label>
+                          <input
+                            id="laptopHandover"
+                            name="laptopHandover"
+                            type="checkbox"
+                            className="ml-2 accent-blue-600 w-5 h-5"
+                          />
+                        </div>
+                        <div className="flex items-center  justify-between gap-2">
+                          <label htmlFor="idCardHandover" className="text-sm font-medium text-gray-700">ID Card Handover</label>
+                          <input
+                            id="idCardHandover"
+                            name="idCardHandover"
+                            type="checkbox"
+                            className="ml-2 accent-blue-600 w-5 h-5"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="ktNotes" className="text-sm font-medium text-gray-700">KT Handover Notes</label>
+                          <textarea
+                            id="ktNotes"
+                            name="ktNotes"
+                            className="mt-1 block w-full border rounded p-2 text-sm"
+                            rows={6}
+                            placeholder="Enter KT handover notes..."
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Submit
+                        </button>
+                      </form>
+                    ) : (
+                      <p>Resigned</p>
+                    )}
+
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           </div>
         </div>
       </div>

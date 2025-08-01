@@ -19,7 +19,7 @@ const formTabs = [
   { id: "academic", label: "Academic Details" },
   { id: "certification", label: "Certification Details" },
   { id: "documents", label: "Documents" },
-  { id: "professional", label: "Professional Details" },
+  // { id: "professional", label: "Professional Details" },
 ];
 
 interface ResourceInformation {
@@ -72,7 +72,6 @@ export default function ResourceForm() {
     academic: false,
     certification: false,
     documents: false,
-    professional: false,
   });
 
   useEffect(() => {
@@ -105,7 +104,6 @@ export default function ResourceForm() {
             Object.keys(data.documents.joining || {}).length > 0 ||
             (data.documents.bgv || []).length > 0
           ),
-          professional: data.professional && Object.keys(data.professional).length > 0,
         });
 
         // Validate pre-filled data
@@ -147,11 +145,6 @@ export default function ResourceForm() {
       if (data.documents) {
         await documentsSchema.parseAsync(data.documents);
         validationResults.documents = true;
-      }
-
-      if (data.professional && Object.keys(data.professional).length > 0) {
-        await professionalInfoSchema.parseAsync(data.professional);
-        validationResults.professional = true;
       }
 
       setFormValidation(validationResults);
@@ -310,7 +303,7 @@ export default function ResourceForm() {
   return (
     <div className="container mx-auto p-16">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           {formTabs.map((tab) => (
             <TabsTrigger key={tab.id} value={tab.id}>
               {tab.label}
@@ -345,13 +338,13 @@ export default function ResourceForm() {
             onSave={(data) => handleSave("documents", data)}
           />
         </TabsContent>
-        <TabsContent value="professional">
+        {/* <TabsContent value="professional">
           <ProfessionalInfoForm
             id={params.id}
             initialData={formData.professional}
             onSave={(data) => handleSave("professional", data)}
           />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
       <div className="flex justify-between mt-6">
         <Button
@@ -363,7 +356,9 @@ export default function ResourceForm() {
           Previous
         </Button>
         {activeTab === formTabs[formTabs.length - 1].id ? (
-          <Button onClick={handleSubmit} disabled={!Object.values(hasData).every(Boolean) && !Object.values(formValidation).every(Boolean)}>
+          <Button onClick={handleSubmit}
+            disabled={!Object.values(hasData).every(Boolean) && !Object.values(formValidation).every(Boolean)}
+          >
             Submit
           </Button>
         ) : (

@@ -21,34 +21,18 @@ import { User } from "@/types";
 import Image from "next/image";
 import api from "@/lib/axiosInstance";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-const passwordResetSchema = z.object({
-  currentPassword: z.string().min(8, "Current password must be at least 8 characters"),
-  newPassword: z.string()
-    .min(8, "New password must meet security requirements")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-      "Must contain uppercase, number, and special character"
-    ),
-});
-
 const forgotPasswordSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  newPassword: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-      "Must contain uppercase, number, and special character"
-    ),
+  email: z.string().min(1, "Please enter a valid email address"),
 });
 
-export default function PeoplePulseAuthGateway() {
-  const [isResetting, setIsResetting] = useState(false);
+export default function Login() {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -56,32 +40,28 @@ export default function PeoplePulseAuthGateway() {
 
   const form = useForm({
     resolver: zodResolver(
-      isForgotPassword ? forgotPasswordSchema :
-        isResetting ? passwordResetSchema : loginSchema
+      isForgotPassword ? forgotPasswordSchema : loginSchema
     ),
     defaultValues: {
       username: "",
       password: "",
-      currentPassword: "",
-      newPassword: ""
+      email: ""
     },
     mode: "onBlur",
   });
 
   useEffect(() => {
     form.reset();
-  }, [isResetting, isForgotPassword, form]);
+  }, [isForgotPassword, form]);
 
   const handleAuthSubmission = async (
-    data: z.infer<typeof loginSchema> |
-      z.infer<typeof passwordResetSchema> |
-      z.infer<typeof forgotPasswordSchema>
+    data: z.infer<typeof loginSchema> | z.infer<typeof forgotPasswordSchema>
   ) => {
     setIsSubmitting(true);
 
     try {
       if (isForgotPassword) {
-        await handlePasswordReset(data as z.infer<typeof forgotPasswordSchema>);
+        await handleForgotPassword(data as z.infer<typeof forgotPasswordSchema>);
         return;
       }
 
@@ -120,16 +100,11 @@ export default function PeoplePulseAuthGateway() {
     router.push(`/${response.data.accessTypeName.toLowerCase()}`);
   };
 
-  const handlePasswordReset = async (data: z.infer<typeof forgotPasswordSchema>) => {
-    await api.patch("/User/change-password", {
-      username: data.username,
-      newPassword: data.newPassword,
-      forgotPassword: true,
-    });
+  const handleForgotPassword = async (data: z.infer<typeof forgotPasswordSchema>) => {
+    const response = await api.post(`/user/reset-password-confirmation?username=${data.email}`);
 
-    toast.success("Password reset successful. Please login with your new password.");
+    toast.success("Password reset instructions have been sent to your email.");
     setIsForgotPassword(false);
-    form.reset();
   };
 
   const handleAuthError = (error: any) => {
@@ -141,8 +116,7 @@ export default function PeoplePulseAuthGateway() {
     form.reset({
       username: "",
       password: "",
-      currentPassword: "",
-      newPassword: ""
+      email: ""
     });
   };
 
@@ -160,11 +134,7 @@ export default function PeoplePulseAuthGateway() {
         </div>
 
         <h1 className="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-8">
-          {isForgotPassword
-            ? "Reset Password"
-            : isResetting
-              ? "Secure Password Reset"
-              : "Employee Authentication Portal"}
+          {isForgotPassword ? "Forgot Password" : "Employee Authentication Portal"}
         </h1>
 
         <Form {...form}>
@@ -173,48 +143,27 @@ export default function PeoplePulseAuthGateway() {
             className="space-y-6"
           >
             {isForgotPassword ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">
-                        Username
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter your username"
-                          className="focus:ring-2 focus:ring-primary-500"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="newPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">
-                        New Password
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Enter new password"
-                          className="focus:ring-2 focus:ring-primary-500"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            ) : !isResetting ? (
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 dark:text-gray-200">
+                      Email Address or Username
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+
+                        placeholder="Enter your email address or username"
+                        className="focus:ring-2 focus:ring-primary-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
               <>
                 <FormField
                   control={form.control}
@@ -258,64 +207,19 @@ export default function PeoplePulseAuthGateway() {
                   )}
                 />
               </>
-            ) : (
-              <>
-                <FormField
-                  control={form.control}
-                  name="currentPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">
-                        Current Password
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Verify current password"
-                          className="focus:ring-2 focus:ring-primary-500"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="newPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-200">
-                        New Password
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Create new password"
-                          className="focus:ring-2 focus:ring-primary-500"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isForgotPassword ? (
-                "Reset Password"
-              ) : isResetting ? (
-                "Update Credentials"
+                "Send Reset Instructions"
               ) : (
                 "Sign In"
               )}
             </Button>
 
-            {!isResetting && !isForgotPassword && (
+            {!isForgotPassword && (
               <button
                 type="button"
                 onClick={() => setIsForgotPassword(true)}
@@ -325,11 +229,10 @@ export default function PeoplePulseAuthGateway() {
               </button>
             )}
 
-            {(isResetting || isForgotPassword) && (
+            {isForgotPassword && (
               <button
                 type="button"
                 onClick={() => {
-                  setIsResetting(false);
                   setIsForgotPassword(false);
                   form.reset();
                 }}

@@ -19,7 +19,7 @@ export type PaginatedResponse = ProjectType[];
 
 export const projectFormSchema = z.object({
   isActive: z.boolean(),
-  name: z.string().min(6, "Project name must be at least 6 characters"),
+  name: z.string().min(2, "Project name must be at least 2 characters"),
   projectCode: z.string().min(1, "Project code is required"),
   startDate: z.date({ required_error: "Start date is required" }),
   endDate: z.date({ required_error: "End date is required" }),
