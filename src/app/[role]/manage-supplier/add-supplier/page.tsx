@@ -399,101 +399,107 @@ export default function AddSupplier() {
 function ContactForm({
   onSubmit,
 }: {
-  onSubmit: (values: z.infer<typeof supplierContactSchema>) => void;
+  onSubmit: (contact: any) => void;
 }) {
-  const contactForm = useForm<z.infer<typeof supplierContactSchema>>({
-    resolver: zodResolver(supplierContactSchema),
-    defaultValues: {
+  const [contactData, setContactData] = useState({
+    id: 0,
+    isActive: true,
+    contactTypeID: contactTypes[0].id,
+    name: "",
+    contactNumber: "",
+    contactEmail: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (!contactData.name || !contactData.contactNumber || !contactData.contactEmail) {
+      toast.error("Please fill all contact fields");
+      return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contactData.contactEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    
+    // Phone validation
+    if (contactData.contactNumber.length < 10) {
+      toast.error("Contact number must be at least 10 digits");
+      return;
+    }
+    
+    onSubmit(contactData);
+    setContactData({
       id: 0,
       isActive: true,
       contactTypeID: contactTypes[0].id,
       name: "",
       contactNumber: "",
       contactEmail: "",
-    },
-  });
+    });
+  };
 
-  const handleSubmit = (values: z.infer<typeof supplierContactSchema>) => {
-    onSubmit(values);
-    contactForm.reset();
+  const handleInputChange = (field: string, value: any) => {
+    setContactData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
-    <Form {...contactForm}>
-      <form
-        onSubmit={contactForm.handleSubmit(handleSubmit)}
-        className="space-y-4"
-      >
-        <FormField
-          control={contactForm.control}
-          name="contactTypeID"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact Type</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(Number(value))}
-                value={String(field.value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select contact type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contactTypes.map((ct) => (
-                    <SelectItem key={ct.id} value={String(ct.id)}>
-                      {ct.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Contact Type</label>
+        <Select
+          value={String(contactData.contactTypeID)}
+          onValueChange={(value) => handleInputChange("contactTypeID", Number(value))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select contact type" />
+          </SelectTrigger>
+          <SelectContent>
+            {contactTypes.map((ct) => (
+              <SelectItem key={ct.id} value={String(ct.id)}>
+                {ct.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <FormField
-          control={contactForm.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Enter name" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Name</label>
+        <Input
+          value={contactData.name}
+          onChange={(e) => handleInputChange("name", e.target.value)}
+          placeholder="Enter name"
         />
+      </div>
 
-        <FormField
-          control={contactForm.control}
-          name="contactNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact Number</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Enter contact number" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Contact Number</label>
+        <Input
+          value={contactData.contactNumber}
+          onChange={(e) => handleInputChange("contactNumber", e.target.value)}
+          placeholder="Enter contact number"
         />
+      </div>
 
-        <FormField
-          control={contactForm.control}
-          name="contactEmail"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Enter email" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Email</label>
+        <Input
+          type="email"
+          value={contactData.contactEmail}
+          onChange={(e) => handleInputChange("contactEmail", e.target.value)}
+          placeholder="Enter email"
         />
+      </div>
 
-        <Button type="submit">Add Contact</Button>
-      </form>
-    </Form>
+      <Button type="submit">Add Contact</Button>
+    </form>
   );
 }
