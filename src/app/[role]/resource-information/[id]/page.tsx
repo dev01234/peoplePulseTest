@@ -233,14 +233,7 @@ export default function ResourceForm() {
     setFormData(updatedData);
 
     try {
-      const response = await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
-      
-      // Update resourceInfo state with the response data to get the latest IDs
-      if (response.data && response.data.data) {
-        setResourceInfo(response.data.data);
-        setFormData(response.data.data);
-      }
-      
+      await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
       toast.success("Details saved successfully");
       // Update hasData state after successful save
       setHasData(prev => ({ ...prev, [section]: true }));
