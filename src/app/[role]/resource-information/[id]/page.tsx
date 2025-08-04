@@ -7,10 +7,11 @@ import PersonalInfoForm from "@/components/resource-form/personal-info-form";
 import AcademicInfoForm from "@/components/resource-form/academic-info-form";
 import CertificationForm from "@/components/resource-form/certification-form";
 import DocumentsForm from "@/components/resource-form/documents-form";
+import ProfessionalInfoForm from "@/components/resource-form/professional-info-form";
 import { toast } from "sonner";
 import api from "@/lib/axiosInstance";
 import { useParams, useRouter } from "next/navigation";
-import { personalAndProfessionalInfoSchema, academicSchema, certificationSchema, documentsSchema } from "@/lib/resource";
+import { personalInfoSchema, academicSchema, certificationSchema, documentsSchema, professionalInfoSchema } from "@/lib/resource";
 import { useUserStore } from "@/store/userStore";
 
 const formTabs = [
@@ -18,10 +19,7 @@ const formTabs = [
   { id: "academic", label: "Academic Details" },
   { id: "certification", label: "Certification Details" },
   { id: "documents", label: "Documents" },
-<<<<<<< HEAD
   // { id: "professional", label: "Professional Details" },
-=======
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
 ];
 
 interface ResourceInformation {
@@ -80,7 +78,7 @@ export default function ResourceForm() {
     const fetchResourceInfo = async () => {
       try {
         const response = await api.get(`/ResourceInformation/${params.id}`);
-        const data = response.data;
+        const data = response.data.data;
         setResourceInfo(data);
         setFormData({
           id: data.id,
@@ -125,16 +123,12 @@ export default function ResourceForm() {
       academic: false,
       certification: false,
       documents: false,
+      professional: false,
     };
 
     try {
       if (data.personal && Object.keys(data.personal).length > 0) {
-        // We'll validate both personal and professional data together
-        const combinedData = {
-          ...data.personal,
-          ...data.professional
-        };
-        await personalAndProfessionalInfoSchema.parseAsync(combinedData);
+        await personalInfoSchema.parseAsync(data.personal);
         validationResults.personal = true;
       }
 
@@ -162,9 +156,8 @@ export default function ResourceForm() {
   const validateSection = async (section: string, data: any) => {
     try {
       switch (section) {
-        case "personal": 
-          // Now validating both personal and professional data together
-          await personalAndProfessionalInfoSchema.parseAsync(data);
+        case "personal":
+          await personalInfoSchema.parseAsync(data);
           break;
         case "academic":
           await academicSchema.parseAsync(data);
@@ -174,6 +167,9 @@ export default function ResourceForm() {
           break;
         case "documents":
           await documentsSchema.parseAsync(data);
+          break;
+        case "professional":
+          await professionalInfoSchema.parseAsync(data);
           break;
       }
       setFormValidation(prev => ({ ...prev, [section]: true }));
@@ -193,52 +189,19 @@ export default function ResourceForm() {
       return;
     }
 
-    // Create a copy of the current form data
-    let updatedData = { ...formData };
+    const updatedData = { ...formData };
 
     if (section === "personal") {
-      // Extract personal and professional data from the combined form
-      const personalData = {
-        isActive: data.isActive,
-        joiningDate: data.joiningDate,
-        gender: data.gender,
-        dateOfBirth: data.dateOfBirth,
-        officialMailingAddress: data.officialMailingAddress,
-        pincode: data.pincode,
-        stateID: data.stateID,
-        hometownAddress: data.hometownAddress,
-        alternateContactNumber: data.alternateContactNumber,
-        emergencyContactNumber: data.emergencyContactNumber,
-        fathersName: data.fathersName,
-        mothersName: data.mothersName,
+      updatedData.personal = {
+        ...data,
         resourceInformationID: resourceInfo.id,
         id: resourceInfo.personal?.id || 0
       };
-      
-      const professionalData = {
-        domainID: data.domainID,
-        domainRoleID: data.domainRoleID,
-        domainLevelID: data.domainLevelID,
-        overallExperience: data.overallExperience,
-        cwfid: data.cwfid,
-        officialEmailID: data.officialEmailID,
-        laptopProviderID: data.laptopProviderID,
-        assetAssignedDate: data.assetAssignedDate,
-        assetModelNo: data.assetModelNo,
-        assetSerialNo: data.assetSerialNo,
-        poNo: data.poNo,
-        poDate: data.poDate,
-        lastWorkingDate: data.lastWorkingDate,
-        attendanceRequired: data.attendanceRequired,
+    } else if (section === "professional") {
+      updatedData.professional = {
+        ...data,
         resourceInformationID: resourceInfo.id,
-        id: resourceInfo.professional?.id || 0
-      };
-      
-      // Update the form data with the separated personal and professional data
-      updatedData = {
-        ...updatedData,
-        personal: personalData,
-        professional: professionalData
+        id: resourceInfo.personal?.id || resourceInfo.professional?.id || 0
       };
     } else if (section === "academic") {
       updatedData.academic = data.map((item: any) => ({
@@ -270,50 +233,13 @@ export default function ResourceForm() {
     setFormData(updatedData);
 
     try {
-      const response = await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
-      
-      // Update resourceInfo with the response data to get the latest IDs
-      if (response.data && response.data.data) {
-        setResourceInfo(response.data.data);
-        
-        // Update formData with the latest data including new IDs
-        setFormData({
-          id: response.data.data.id,
-          resourceID: response.data.data.resourceID,
-          personal: response.data.data.personal || {},
-          academic: response.data.data.academic || [],
-          certification: response.data.data.certification || [],
-          documents: {
-            resourceInformationID: response.data.data?.documents?.resourceInformationID,
-            id: response.data.data.documents?.id || 0,
-            joining: response.data.data.documents?.joining || {},
-            bgv: response.data.data.documents?.bgv || [],
-          },
-          professional: response.data.data.professional || {},
-        });
-      }
-      
-      if (section === "personal") {
-        toast.success("Personal and professional details saved successfully");
-      } else {
-        toast.success(`${section.charAt(0).toUpperCase() + section.slice(1)} details saved successfully`);
-      }
-      
-      if (section === "personal") {
-        // Update both personal and professional hasData states
-        setHasData(prev => ({ ...prev, [section]: true }));
-        setHasData(prev => ({ ...prev, professional: true }));
-        
-        // Update both personal and professional validation states
-        setFormValidation(prev => ({ ...prev, [section]: true }));
-        setFormValidation(prev => ({ ...prev, professional: true }));
-      } else {
-        // For other sections, just update their own state
-        setHasData(prev => ({ ...prev, [section]: true }));
-      }
+      await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
+      toast.success("Details saved successfully");
+      // Update hasData state after successful save
+      setHasData(prev => ({ ...prev, [section]: true }));
     } catch (error) {
       console.error("Error saving details:", error);
-      toast.error(`Error while saving ${section} details`);
+      toast.error("Error while saving details");
     }
   };
 
@@ -356,7 +282,7 @@ export default function ResourceForm() {
 
     // Check if all sections have either data or are validated
     const allSectionsComplete = Object.keys(hasData).every(
-      section => section === "professional" || hasData[section] || formValidation[section]
+      section => hasData[section] || formValidation[section]
     );
 
     if (!allSectionsComplete) {
@@ -412,7 +338,6 @@ export default function ResourceForm() {
             onSave={(data) => handleSave("documents", data)}
           />
         </TabsContent>
-<<<<<<< HEAD
         {/* <TabsContent value="professional">
           <ProfessionalInfoForm
             id={params.id}
@@ -420,8 +345,6 @@ export default function ResourceForm() {
             onSave={(data) => handleSave("professional", data)}
           />
         </TabsContent> */}
-=======
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
       </Tabs>
       <div className="flex justify-between mt-6">
         <Button
@@ -433,13 +356,9 @@ export default function ResourceForm() {
           Previous
         </Button>
         {activeTab === formTabs[formTabs.length - 1].id ? (
-<<<<<<< HEAD
           <Button onClick={handleSubmit}
             disabled={!Object.values(hasData).every(Boolean) && !Object.values(formValidation).every(Boolean)}
           >
-=======
-          <Button onClick={handleSubmit} disabled={!Object.entries(hasData).filter(([key]) => key !== "professional").every(([_, value]) => value) && !Object.entries(formValidation).filter(([key]) => key !== "professional").every(([_, value]) => value)}>
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
             Submit
           </Button>
         ) : (
