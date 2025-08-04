@@ -20,13 +20,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -74,10 +67,9 @@ export default function AddSupplier() {
 
   const form = useForm<z.infer<typeof extendedFormSchema>>({
     resolver: zodResolver(extendedFormSchema),
-    mode: "onChange", // Enable real-time validation
     defaultValues: {
       name: "",
-      sidDate: "",
+      sid: "",
       contactNumber: "",
       address: "",
       stateID: 0,
@@ -100,14 +92,15 @@ export default function AddSupplier() {
   const createSupplier = useMutation({
     mutationFn: SupplierApi.createSupplier,
     onSuccess: (data) => {
-      if (!data.data.error) {
-        form.reset();
-        queryClient.invalidateQueries({ queryKey: ["clients"] });
-        router.push("/admin/manage-supplier");
-        return;
-      }
-      toast.error(data.data.error);
+      form.reset();
+      toast.success("Supplier created successfully.");
+      router.push("/admin/manage-supplier");
     },
+    onError: (error: any) => {
+      // error may not always have a .response property, so log the whole error
+      console.error("Error creating supplier:");
+      toast.error(error.response.data.error);
+    }
   });
 
   // Watch the supplier name and hasApplicationAccess to auto-populate username
@@ -128,7 +121,7 @@ export default function AddSupplier() {
     let supplierData = {
       isActive: true,
       name: values.name,
-      sidDate: values.sidDate,
+      sid: values.sid,
       address: values.address,
       stateID: values.stateID,
       gst: values.gst,
@@ -172,10 +165,10 @@ export default function AddSupplier() {
 
           <FormField
             control={form.control}
-            name="sidDate"
+            name="sid"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>SID</FormLabel>
+                <FormLabel>SID *</FormLabel>
                 <FormControl>
                   <Input {...field} type="text" placeholder="Enter SID" />
                 </FormControl>
@@ -189,7 +182,7 @@ export default function AddSupplier() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Email *</FormLabel>
                 <FormControl>
                   <Input {...field} type="email" placeholder="Email address" />
                 </FormControl>
@@ -204,7 +197,7 @@ export default function AddSupplier() {
             name="contactNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contact Number</FormLabel>
+                <FormLabel>Contact Number *</FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="Enter contact number" />
                 </FormControl>
@@ -304,13 +297,13 @@ export default function AddSupplier() {
           />
 
           {/* Contact Matrix */}
-          <div className="space-y-4">
-            <FormLabel>Contact Matrix *</FormLabel>
-            <FormField
-              control={form.control}
-              name="contactInformation"
-              render={({ field }) => (
-                <FormItem>
+          <FormField
+            control={form.control}
+            name="contactInformation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Matrix *</FormLabel>
+                <FormControl>
                   <div className="space-y-2">
                     {field.value.map((contact, index) => (
                       <div key={index} className="p-4 border rounded">
@@ -339,19 +332,19 @@ export default function AddSupplier() {
                         </DialogHeader>
                         <ContactForm
                           onSubmit={(contact) => {
-                            const currentContacts = field.value;
-                            field.onChange([...currentContacts, contact]);
+                            const updatedContacts = [...field.value, contact];
+                            field.onChange(updatedContacts);
                             setContactOpen(false);
                           }}
                         />
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Application Access Section */}
           <div className="space-y-4 border-t pt-4">
