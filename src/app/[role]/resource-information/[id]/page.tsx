@@ -270,8 +270,34 @@ export default function ResourceForm() {
     setFormData(updatedData);
 
     try {
-      await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
-      toast.success("Personal and professional details saved successfully");
+      const response = await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
+      
+      // Update resourceInfo with the response data to get the latest IDs
+      if (response.data && response.data.data) {
+        setResourceInfo(response.data.data);
+        
+        // Update formData with the latest data including new IDs
+        setFormData({
+          id: response.data.data.id,
+          resourceID: response.data.data.resourceID,
+          personal: response.data.data.personal || {},
+          academic: response.data.data.academic || [],
+          certification: response.data.data.certification || [],
+          documents: {
+            resourceInformationID: response.data.data?.documents?.resourceInformationID,
+            id: response.data.data.documents?.id || 0,
+            joining: response.data.data.documents?.joining || {},
+            bgv: response.data.data.documents?.bgv || [],
+          },
+          professional: response.data.data.professional || {},
+        });
+      }
+      
+      if (section === "personal") {
+        toast.success("Personal and professional details saved successfully");
+      } else {
+        toast.success(`${section.charAt(0).toUpperCase() + section.slice(1)} details saved successfully`);
+      }
       
       if (section === "personal") {
         // Update both personal and professional hasData states
@@ -287,7 +313,7 @@ export default function ResourceForm() {
       }
     } catch (error) {
       console.error("Error saving details:", error);
-      toast.error("Error while saving details");
+      toast.error(`Error while saving ${section} details`);
     }
   };
 
