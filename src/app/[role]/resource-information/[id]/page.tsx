@@ -270,8 +270,40 @@ export default function ResourceForm() {
     setFormData(updatedData);
 
     try {
-      await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
+      const response = await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
       toast.success("Personal and professional details saved successfully");
+      
+      // Update the resourceInfo and formData with the response data for first-time saves
+      if (response.data && response.data.data) {
+        const responseData = response.data.data;
+        
+        // Update resourceInfo with the new IDs
+        setResourceInfo(prev => ({
+          ...prev,
+          id: responseData.id || prev.id,
+          personal: responseData.personal || prev.personal,
+          professional: responseData.professional || prev.professional,
+          documents: responseData.documents || prev.documents,
+          academic: responseData.academic || prev.academic,
+          certification: responseData.certification || prev.certification
+        }));
+        
+        // Update formData with the new IDs
+        setFormData(prev => ({
+          ...prev,
+          id: responseData.id || prev.id,
+          personal: responseData.personal || prev.personal,
+          professional: responseData.professional || prev.professional,
+          documents: {
+            resourceInformationID: responseData.documents?.resourceInformationID || prev.documents.resourceInformationID,
+            id: responseData.documents?.id || prev.documents.id,
+            joining: responseData.documents?.joining || prev.documents.joining,
+            bgv: responseData.documents?.bgv || prev.documents.bgv,
+          },
+          academic: responseData.academic || prev.academic,
+          certification: responseData.certification || prev.certification
+        }));
+      }
       
       if (section === "personal") {
         // Update both personal and professional hasData states
