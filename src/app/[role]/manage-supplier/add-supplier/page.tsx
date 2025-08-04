@@ -74,6 +74,7 @@ export default function AddSupplier() {
 
   const form = useForm<z.infer<typeof extendedFormSchema>>({
     resolver: zodResolver(extendedFormSchema),
+    mode: "onChange", // Enable real-time validation
     defaultValues: {
       name: "",
       sidDate: "",
@@ -305,49 +306,51 @@ export default function AddSupplier() {
           {/* Contact Matrix */}
           <div className="space-y-4">
             <FormLabel>Contact Matrix *</FormLabel>
-            <div className="space-y-2">
-              {form.watch("contactInformation").map((contact, index) => (
-                <div key={index} className="p-4 border rounded">
-                  <p>
-                    Type:{" "}
-                    {
-                      contactTypes.find((ct) => ct.id === contact.contactTypeID)
-                        ?.name
-                    }
-                  </p>
-                  <p>Name: {contact.name}</p>
-                  <p>Number: {contact.contactNumber}</p>
-                  <p>Email: {contact.contactEmail}</p>
-                </div>
-              ))}
+            <FormField
+              control={form.control}
+              name="contactInformation"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="space-y-2">
+                    {field.value.map((contact, index) => (
+                      <div key={index} className="p-4 border rounded">
+                        <p>
+                          Type:{" "}
+                          {
+                            contactTypes.find((ct) => ct.id === contact.contactTypeID)
+                              ?.name
+                          }
+                        </p>
+                        <p>Name: {contact.name}</p>
+                        <p>Number: {contact.contactNumber}</p>
+                        <p>Email: {contact.contactEmail}</p>
+                      </div>
+                    ))}
 
-              <Dialog open={contactOpen} onOpenChange={setContactOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" type="button">
-                    + Add Contact
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Contact</DialogTitle>
-                  </DialogHeader>
-                  <ContactForm
-                    onSubmit={(contact) => {
-                      const currentContacts =
-                        form.getValues("contactInformation");
-                      form.setValue("contactInformation", [
-                        ...currentContacts,
-                        contact,
-                      ]);
-                      setContactOpen(false);
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-            <FormMessage>
-              {form.formState.errors.contactInformation?.message}
-            </FormMessage>
+                    <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" type="button">
+                          + Add Contact
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Contact</DialogTitle>
+                        </DialogHeader>
+                        <ContactForm
+                          onSubmit={(contact) => {
+                            const currentContacts = field.value;
+                            field.onChange([...currentContacts, contact]);
+                            setContactOpen(false);
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           {/* Application Access Section */}
