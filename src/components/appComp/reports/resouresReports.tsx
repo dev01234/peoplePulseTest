@@ -101,14 +101,20 @@ export function ResourceReports() {
 
   const formatDate = (dateString: string) => {
     try {
+      if (!dateString || dateString === null || dateString === undefined) {
+        return "N/A";
+      }
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "N/A";
+      }
       return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric"
       });
     } catch (e) {
-      return dateString;
+      return "N/A";
     }
   };
 
