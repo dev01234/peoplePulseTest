@@ -201,7 +201,7 @@ export default function ResourceForm() {
       updatedData.professional = {
         ...data,
         resourceInformationID: resourceInfo.id,
-        id: resourceInfo.personal?.id || resourceInfo.professional?.id || 0
+        id: resourceInfo.professional?.id || 0
       };
     } else if (section === "academic") {
       updatedData.academic = data.map((item: any) => ({
