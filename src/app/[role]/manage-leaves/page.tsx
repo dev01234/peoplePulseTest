@@ -13,9 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  mockLeaveTypes,
-  mockLeaveBalance,
-  mockLeaveRequests,
 } from "@/data/mock";
 import { format, parseISO } from "date-fns";
 import { CalendarRange, Clock, Plus } from "lucide-react";
@@ -28,6 +25,8 @@ import { dropdownApi } from "@/services/api/dropdown";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useUserStore } from "@/store/userStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function LeavesPage() {
   const queryClient = useQueryClient();
@@ -83,13 +82,21 @@ export default function LeavesPage() {
   };
   const { data: leaveRequests = [], isLoading } = useQuery({
     queryKey: ["leavesrequest"],
-    queryFn: ()=> LeaveApi.fetchResourceLeaveRequests(user?.resourceID),
+    queryFn: () => LeaveApi.fetchResourceLeaveRequests(user?.resourceID),
     enabled: !!user?.resourceID
   });
-  
+
   const { data: leaveTypes = [] } = useQuery({
     queryKey: ["leaveTypes"],
     queryFn: dropdownApi.fetchLeaveTypes,
+  });
+
+  const { data: leaveBalance = [], isLoading: isLeaveBalanceLoading, error: leaveBalanceError } = useQuery({
+    queryKey: ["leaveBalance", user?.resourceID],
+    queryFn: () => LeaveApi.fetchLeaveBalance(user?.resourceID),
+    enabled: !!user?.resourceID,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const getStatusColor = (status: string) => {
@@ -211,19 +218,42 @@ export default function LeavesPage() {
                 <CardTitle>Leave Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockLeaveBalance.map((balance) => {
-                    const leaveType = mockLeaveTypes.find(
-                      (t) => t.id === balance.leaveTypeId
-                    );
-                    return (
+                {leaveBalanceError ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Failed to load leave balance. Please try again later.
+                    </AlertDescription>
+                  </Alert>
+                ) : isLeaveBalanceLoading ? (
+                  <div className="space-y-4">
+                    {Array(3).fill(0).map((_, index) => (
+                      <div key={index} className="p-4 rounded-lg bg-muted/50 animate-pulse">
+                        <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="h-3 bg-gray-200 rounded"></div>
+                          <div className="h-3 bg-gray-200 rounded"></div>
+                          <div className="h-3 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : leaveBalance.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No leave balance data available
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {leaveBalance.map((balance) => (
                       <div
-                        key={balance.id}
+                        key={balance.leaveTypeID}
                         className="p-4 rounded-lg bg-muted/50"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium">{leaveType?.name}</h3>
-                          <Badge variant="secondary">{leaveType?.code}</Badge>
+                          <h3 className="font-medium">{balance.leaveTypeName}</h3>
+                          <Badge variant="secondary">
+                            {balance.leaveTypeName.split(' ').map(word => word[0]).join('')}
+                          </Badge>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-sm">
                           <div>
@@ -237,14 +267,14 @@ export default function LeavesPage() {
                           <div>
                             <p className="text-muted-foreground">Available</p>
                             <p className="font-medium">
-                              {balance.total - balance.used - balance.pending}
+                              {balance.total - balance.used}
                             </p>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -262,14 +292,14 @@ export default function LeavesPage() {
                     <div className="space-y-4">
                       {leaveRequests.filter(
                         (request: Leave) =>
-                          request.status.toLowerCase() === "pending"
+                          request?.status?.toLowerCase?.() === "pending"
                       ).length === 0 ? (
                         <p>No pending leave requests.</p>
                       ) : (
                         leaveRequests
                           .filter(
                             (request: Leave) =>
-                              request.status.toLowerCase() === "pending"
+                              request?.status?.toLowerCase?.() === "pending"
                           )
                           .map((request: Leave) => (
                             <div
@@ -301,14 +331,14 @@ export default function LeavesPage() {
                     <div className="space-y-4">
                       {leaveRequests.filter(
                         (request: Leave) =>
-                          request.status.toLowerCase() !== "pending"
+                          request?.status?.toLowerCase?.() !== "pending"
                       ).length === 0 ? (
                         <p>No history.</p>
                       ) : (
                         leaveRequests
                           .filter(
                             (request: Leave) =>
-                              request.status.toLowerCase() !== "pending"
+                              request?.status?.toLowerCase?.() !== "pending"
                           )
                           .map((request: Leave) => (
                             <div

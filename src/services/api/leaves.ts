@@ -29,6 +29,10 @@ export const LeaveApi = {
     const response = await api.get(`/Leave/resource-leaves?resourceId=${resourceId}`);
     return response.data
   },
+  fetchLeaveBalance: async (resourceId: number) => {
+    const response = await api.get(`/Leave/${resourceId}/GetLeavesStats`);
+    return response.data;
+  },
   applyLeave: async (values: Leave) => {
     const response = await api.post("/Leave", values);
     return response.data;
