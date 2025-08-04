@@ -31,6 +31,7 @@ const laptopProviders = [
   { id: 3, name: "Rented" },
   { id: 4, name: "Business Funded" }
 ];
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 export default function PersonalInfoForm({ initialData, onSave, id }: PersonalInfoFormProps) {
 <<<<<<< HEAD
@@ -52,7 +53,7 @@ export default function PersonalInfoForm({ initialData, onSave, id }: PersonalIn
   // Fetch domain data
 >>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
   const { data: domain = [] } = useQuery({
-    queryKey: ["domain"],
+    queryKey: ["domain", refreshTrigger],
     queryFn: dropdownApi.fetchDomian,
   });
 
@@ -61,7 +62,7 @@ export default function PersonalInfoForm({ initialData, onSave, id }: PersonalIn
   // Fetch domain roles based on selected domain
 >>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
   const { data: domainroles = [], isLoading: isRolesLoading } = useQuery({
-    queryKey: ["domainRoles", selectedDomain],
+    queryKey: ["domainRoles", selectedDomain, refreshTrigger],
     queryFn: () => dropdownApi.fetchDomianBasedRoles(Number(selectedDomain)),
     enabled: !!selectedDomain,
   });
@@ -71,7 +72,7 @@ export default function PersonalInfoForm({ initialData, onSave, id }: PersonalIn
   // Fetch domain levels
 >>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
   const { data: domainLevels = [] } = useQuery({
-    queryKey: ["domainLevels"],
+    queryKey: ["domainLevels", refreshTrigger],
     queryFn: dropdownApi.fetchDomianelevels,
   });
 
@@ -215,7 +216,12 @@ export default function PersonalInfoForm({ initialData, onSave, id }: PersonalIn
         attendanceRequired: data.attendanceRequired,
       }
     };
-    onSave(formData);
+    
+    // Call onSave and then trigger a refresh
+    await onSave(formData);
+    
+    // Trigger useEffect to refetch personal details
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
