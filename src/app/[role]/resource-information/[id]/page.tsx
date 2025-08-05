@@ -18,10 +18,6 @@ const formTabs = [
   { id: "academic", label: "Academic Details" },
   { id: "certification", label: "Certification Details" },
   { id: "documents", label: "Documents" },
-<<<<<<< HEAD
-  // { id: "professional", label: "Professional Details" },
-=======
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
 ];
 
 interface ResourceInformation {
@@ -59,7 +55,7 @@ export default function ResourceForm() {
     professional: {},
   });
 
-  const { user } = useUserStore()
+  const { user } = useUserStore();
 
   const [formValidation, setFormValidation] = useState({
     personal: false,
@@ -211,8 +207,8 @@ export default function ResourceForm() {
         emergencyContactNumber: data.emergencyContactNumber,
         fathersName: data.fathersName,
         mothersName: data.mothersName,
-        resourceInformationID: resourceInfo.id,
-        id: resourceInfo.personal?.id || 0
+        resourceInformationID: formData.id || resourceInfo.id,
+        id: formData.personal?.id || resourceInfo.personal?.id || 0
       };
       
       const professionalData = {
@@ -230,147 +226,8 @@ export default function ResourceForm() {
         poDate: data.poDate,
         lastWorkingDate: data.lastWorkingDate,
         attendanceRequired: data.attendanceRequired,
-        resourceInformationID: resourceInfo.id,
-        id: resourceInfo.professional?.id || 0
-      };
-      
-      // Update the form data with the separated personal and professional data
-      updatedData = {
-        ...updatedData,
-        personal: personalData,
-        professional: professionalData
-      };
-    } else if (section === "academic") {
-      updatedData.academic = data.map((item: any) => ({
-        ...item,
-        resourceInformationID: resourceInfo.id
-      }));
-    } else if (section === "certification") {
-      updatedData.certification = data.map((item: any) => ({
-        ...item,
-        resourceInformationID: resourceInfo.id
-      }));
-    } else if (section === "documents") {
-      updatedData.documents = {
-        ...data,
-        resourceInformationID: resourceInfo?.documents?.resourceInformationID,
-        id: resourceInfo.documents?.id || 0,
-        joining: {
-          ...data.joining,
-          documentsID: resourceInfo.documents?.joining?.documentsID || 0,
-          id: resourceInfo.documents?.joining?.id || 0
-        },
-        bgv: data.bgv.map((item: any) => ({
-          ...item,
-          documentsID: resourceInfo.documents?.id || 0
-        }))
-      };
-    }
-
-    setFormData(updatedData);
-
-    try {
-      const response = await api.put(`/ResourceInformation/${resourceInfo.id}`, updatedData);
-      toast.success("Personal and professional details saved successfully");
-      
-      // Update the resourceInfo and formData with the response data for first-time saves
-      if (response.data && response.data.data) {
-        const responseData = response.data.data;
-        
-        // Update resourceInfo with the new IDs
-        setResourceInfo(prev => ({
-          ...prev,
-          id: responseData.id || prev.id,
-          personal: responseData.personal || prev.personal,
-          professional: responseData.professional || prev.professional,
-          documents: responseData.documents || prev.documents,
-          academic: responseData.academic || prev.academic,
-          certification: responseData.certification || prev.certification
-        }));
-        
-        // Update formData with the new IDs
-        setFormData(prev => ({
-          ...prev,
-          id: responseData.id || prev.id,
-          personal: responseData.personal || prev.personal,
-          professional: responseData.professional || prev.professional,
-          documents: {
-            resourceInformationID: responseData.documents?.resourceInformationID || prev.documents.resourceInformationID,
-            id: responseData.documents?.id || prev.documents.id,
-            joining: responseData.documents?.joining || prev.documents.joining,
-            bgv: responseData.documents?.bgv || prev.documents.bgv,
-          },
-          academic: responseData.academic || prev.academic,
-          certification: responseData.certification || prev.certification
-        }));
-      }
-      
-      if (section === "personal") {
-        // Update both personal and professional hasData states
-        setHasData(prev => ({ ...prev, [section]: true }));
-        setHasData(prev => ({ ...prev, professional: true }));
-        
-        // Update both personal and professional validation states
-        setFormValidation(prev => ({ ...prev, [section]: true }));
-        setFormValidation(prev => ({ ...prev, professional: true }));
-      } else {
-        // For other sections, just update their own state
-        setHasData(prev => ({ ...prev, [section]: true }));
-      }
-    } catch (error) {
-      console.error("Error saving details:", error);
-      toast.error("Error while saving details");
-    }
-  };
-
-  const handleSave = async (section: string, data: any) => {
-    if (!resourceInfo) return;
-
-    const isValid = await validateSection(section, data);
-    if (!isValid) {
-      toast.error("Please fill all required fields correctly");
-      return;
-    }
-
-    // Create a copy of the current form data
-    let updatedData = { ...formData };
-
-    if (section === "personal") {
-      // Extract personal and professional data from the combined form
-      const personalData = {
-        isActive: data.isActive,
-        joiningDate: data.joiningDate,
-        gender: data.gender,
-        dateOfBirth: data.dateOfBirth,
-        officialMailingAddress: data.officialMailingAddress,
-        pincode: data.pincode,
-        stateID: data.stateID,
-        hometownAddress: data.hometownAddress,
-        alternateContactNumber: data.alternateContactNumber,
-        emergencyContactNumber: data.emergencyContactNumber,
-        fathersName: data.fathersName,
-        mothersName: data.mothersName,
-        resourceInformationID: resourceInfo.id,
-        id: resourceInfo.personal?.id || 0
-      };
-      
-      const professionalData = {
-        domainID: data.domainID,
-        domainRoleID: data.domainRoleID,
-        domainLevelID: data.domainLevelID,
-        overallExperience: data.overallExperience,
-        cwfid: data.cwfid,
-        officialEmailID: data.officialEmailID,
-        laptopProviderID: data.laptopProviderID,
-        assetAssignedDate: data.assetAssignedDate,
-        assetModelNo: data.assetModelNo,
-        assetSerialNo: data.assetSerialNo,
-        poNo: data.poNo,
-        poDate: data.poDate,
-        lastWorkingDate: data.lastWorkingDate,
-        attendanceRequired: data.attendanceRequired,
-        resourceInformationID: resourceInfo.id,
-        id: resourceInfo.professional?.id || 0
+        resourceInformationID: formData.id || resourceInfo.id,
+        id: formData.professional?.id || resourceInfo.professional?.id || 0
       };
       
       // Update the form data with the separated personal and professional data
@@ -476,7 +333,7 @@ export default function ResourceForm() {
     if (currentIndex < formTabs.length - 1 && canNavigateAway(activeTab)) {
       setActiveTab(formTabs[currentIndex + 1].id);
     } else {
-      return null
+      return null;
     }
   };
 
@@ -562,16 +419,6 @@ export default function ResourceForm() {
             onSave={(data) => handleSave("documents", data)}
           />
         </TabsContent>
-<<<<<<< HEAD
-        {/* <TabsContent value="professional">
-          <ProfessionalInfoForm
-            id={params.id}
-            initialData={formData.professional}
-            onSave={(data) => handleSave("professional", data)}
-          />
-        </TabsContent> */}
-=======
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
       </Tabs>
       <div className="flex justify-between mt-6">
         <Button
@@ -583,13 +430,7 @@ export default function ResourceForm() {
           Previous
         </Button>
         {activeTab === formTabs[formTabs.length - 1].id ? (
-<<<<<<< HEAD
-          <Button onClick={handleSubmit}
-            disabled={!Object.values(hasData).every(Boolean) && !Object.values(formValidation).every(Boolean)}
-          >
-=======
           <Button onClick={handleSubmit} disabled={!Object.entries(hasData).filter(([key]) => key !== "professional").every(([_, value]) => value) && !Object.entries(formValidation).filter(([key]) => key !== "professional").every(([_, value]) => value)}>
->>>>>>> edca2845f67b4d1bc2a76a117317510c53d09a49
             Submit
           </Button>
         ) : (

@@ -27,6 +27,7 @@ import {
   startOfToday,
   isWeekend,
   endOfWeek,
+  isFuture,
 } from "date-fns";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ResourceApi } from "@/services/api/resource";
@@ -151,6 +152,7 @@ function TimesheetTable({
                   const currentProjectTotal = projectTotals[dateStr] || 0;
                   const otherProjectsTotal = currentProjectTotal - (projectEntry?.hours[dateStr] || 0);
                   const maxAllowed = Math.max(0, dailyLimit - otherProjectsTotal);
+                  const isFutureDate = isFuture(day);
 
                   return (
                     <td key={dateStr} className="border p-2">
@@ -165,8 +167,8 @@ function TimesheetTable({
                         onChange={(e) =>
                           onTimeChange(project.id, dateStr, Math.round(Number(e.target.value) * 100) / 100)
                         }
-                        readOnly={readOnly || isDisabled}
-                        disabled={isDisabled}
+                        readOnly={readOnly || isDisabled || isFutureDate}
+                        disabled={isDisabled || isFutureDate}
                         title={dailyLimit > 0 ? `Maximum allowed: ${maxAllowed.toFixed(2)} hours (Daily limit: ${dailyLimit.toFixed(2)})` : ""}
                       />
                     </td>
@@ -180,25 +182,18 @@ function TimesheetTable({
             <td className="border p-2 font-bold">Daily Total</td>
             {weekDays.map((day) => {
               const dateStr = format(day, "yyyy-MM-dd");
-              const calculatedTotal = dailyTotals[dateStr] || 0;
-              const projectTotal = projectTotals[dateStr] || 0;
-              const isOvertime = projectTotal > calculatedTotal;
-              const isUndertime = projectTotal < calculatedTotal && calculatedTotal > 0;
+              const dailyHours = dailyTotals[dateStr] || 0;
               return (
                 <td
                   key={dateStr}
-                  className={`border p-2 font-bold ${
-                    isOvertime ? "text-red-600" : 
-                    isUndertime ? "text-yellow-600" : 
-                    "text-green-600"
-                  }`}
+                  className="border p-2 font-bold"
                 >
-                  {projectTotal.toFixed(2)} / {calculatedTotal.toFixed(2)}
+                  {dailyHours.toFixed(2)}
                 </td>
               );
             })}
             <td className="border p-2 font-bold">
-              {Object.values(projectTotals).reduce((sum, hours) => sum + hours, 0).toFixed(2)} / {Object.values(dailyTotals).reduce((sum, hours) => sum + hours, 0).toFixed(2)}
+              {Object.values(dailyTotals).reduce((sum, hours) => sum + hours, 0).toFixed(2)}
             </td>
           </tr>
           <tr className="bg-muted/10">
@@ -208,16 +203,17 @@ function TimesheetTable({
               const timeRange = timeRanges[dateStr] || { start: "", end: "" };
               const isWeekendDay = isWeekend(day);
               const isDisabled = isWeekendDay && !hasWeekendPermission;
+              const isFutureDate = isFuture(day);
               return (
                 <td key={dateStr} className="border p-2">
                   <input
                     type="time"
-                    className={`w-full p-1 border rounded ${isDisabled ? "bg-gray-100" : ""}`}
+                    className={`w-full p-1 border rounded ${isDisabled || isFutureDate ? "bg-gray-100" : ""}`}
                     value={timeRange.start}
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "start", e.target.value)
                     }
-                    disabled={isDisabled}
+                    disabled={isDisabled || isFutureDate}
                   />
                 </td>
               );
@@ -231,16 +227,17 @@ function TimesheetTable({
               const timeRange = timeRanges[dateStr] || { start: "", end: "" };
               const isWeekendDay = isWeekend(day);
               const isDisabled = isWeekendDay && !hasWeekendPermission;
+              const isFutureDate = isFuture(day);
               return (
                 <td key={dateStr} className="border p-2">
                   <input
                     type="time"
-                    className={`w-full p-1 border rounded ${isDisabled ? "bg-gray-100" : ""}`}
+                    className={`w-full p-1 border rounded ${isDisabled || isFutureDate ? "bg-gray-100" : ""}`}
                     value={timeRange.end}
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "end", e.target.value)
                     }
-                    disabled={isDisabled}
+                    disabled={isDisabled || isFutureDate}
                   />
                 </td>
               );
