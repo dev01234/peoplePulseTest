@@ -323,6 +323,150 @@ export default function ResourceForm() {
     }
   };
 
+  const handleSave = async (section: string, data: any) => {
+    if (!resourceInfo) return;
+
+    const isValid = await validateSection(section, data);
+    if (!isValid) {
+      toast.error("Please fill all required fields correctly");
+      return;
+    }
+
+    // Create a copy of the current form data
+    let updatedData = { ...formData };
+
+    if (section === "personal") {
+      // Extract personal and professional data from the combined form
+      const personalData = {
+        isActive: data.isActive,
+        joiningDate: data.joiningDate,
+        gender: data.gender,
+        dateOfBirth: data.dateOfBirth,
+        officialMailingAddress: data.officialMailingAddress,
+        pincode: data.pincode,
+        stateID: data.stateID,
+        hometownAddress: data.hometownAddress,
+        alternateContactNumber: data.alternateContactNumber,
+        emergencyContactNumber: data.emergencyContactNumber,
+        fathersName: data.fathersName,
+        mothersName: data.mothersName,
+        resourceInformationID: resourceInfo.id,
+        id: resourceInfo.personal?.id || 0
+      };
+      
+      const professionalData = {
+        domainID: data.domainID,
+        domainRoleID: data.domainRoleID,
+        domainLevelID: data.domainLevelID,
+        overallExperience: data.overallExperience,
+        cwfid: data.cwfid,
+        officialEmailID: data.officialEmailID,
+        laptopProviderID: data.laptopProviderID,
+        assetAssignedDate: data.assetAssignedDate,
+        assetModelNo: data.assetModelNo,
+        assetSerialNo: data.assetSerialNo,
+        poNo: data.poNo,
+        poDate: data.poDate,
+        lastWorkingDate: data.lastWorkingDate,
+        attendanceRequired: data.attendanceRequired,
+        resourceInformationID: resourceInfo.id,
+        id: resourceInfo.professional?.id || 0
+      };
+      
+      // Update the form data with the separated personal and professional data
+      updatedData = {
+        ...updatedData,
+        personal: personalData,
+        professional: professionalData
+      };
+    } else if (section === "academic") {
+      updatedData.academic = data.map((item: any) => ({
+        ...item,
+        resourceInformationID: formData.id || resourceInfo.id
+      }));
+    } else if (section === "certification") {
+      updatedData.certification = data.map((item: any) => ({
+        ...item,
+        resourceInformationID: formData.id || resourceInfo.id
+      }));
+    } else if (section === "documents") {
+      updatedData.documents = {
+        ...data,
+        resourceInformationID: formData.id || resourceInfo.id,
+        id: formData.documents?.id || resourceInfo.documents?.id || 0,
+        joining: {
+          ...data.joining,
+          documentsID: formData.documents?.id || resourceInfo.documents?.id || 0,
+          id: formData.documents?.joining?.id || resourceInfo.documents?.joining?.id || 0
+        },
+        bgv: data.bgv.map((item: any) => ({
+          ...item,
+          documentsID: formData.documents?.id || resourceInfo.documents?.id || 0
+        }))
+      };
+    }
+
+    setFormData(updatedData);
+
+    try {
+      const response = await api.put(`/ResourceInformation/${formData.id || resourceInfo.id}`, updatedData);
+      
+      if (section === "personal") {
+        toast.success("Personal and professional details saved successfully");
+      } else {
+        toast.success(`${section.charAt(0).toUpperCase() + section.slice(1)} details saved successfully`);
+      }
+      
+      // Update the resourceInfo and formData with the response data for first-time saves
+      if (response.data && response.data.data) {
+        const responseData = response.data.data;
+        
+        // Update resourceInfo with the new IDs
+        setResourceInfo(prev => ({
+          ...prev,
+          id: responseData.id || prev?.id,
+          personal: responseData.personal || prev?.personal,
+          professional: responseData.professional || prev?.professional,
+          documents: responseData.documents || prev?.documents,
+          academic: responseData.academic || prev?.academic,
+          certification: responseData.certification || prev?.certification
+        }));
+        
+        // Update formData with the new IDs
+        setFormData(prev => ({
+          ...prev,
+          id: responseData.id || prev.id,
+          personal: responseData.personal || prev.personal,
+          professional: responseData.professional || prev.professional,
+          documents: {
+            resourceInformationID: responseData.documents?.resourceInformationID || prev.documents.resourceInformationID,
+            id: responseData.documents?.id || prev.documents.id,
+            joining: responseData.documents?.joining || prev.documents.joining,
+            bgv: responseData.documents?.bgv || prev.documents.bgv,
+          },
+          academic: responseData.academic || prev.academic,
+          certification: responseData.certification || prev.certification
+        }));
+      }
+      
+      if (section === "personal") {
+        // Update both personal and professional hasData states
+        setHasData(prev => ({ ...prev, [section]: true }));
+        setHasData(prev => ({ ...prev, professional: true }));
+        
+        // Update both personal and professional validation states
+        setFormValidation(prev => ({ ...prev, [section]: true }));
+        setFormValidation(prev => ({ ...prev, professional: true }));
+      } else {
+        // For other sections, just update their own state
+        setHasData(prev => ({ ...prev, [section]: true }));
+      }
+    } catch (error) {
+      console.error("Error saving details:", error);
+      toast.error("Error while saving details");
+    }
+  };
+
   const canNavigateAway = (currentTab: string) => {
     return hasData[currentTab] || formValidation[currentTab];
   };

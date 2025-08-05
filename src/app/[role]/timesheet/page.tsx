@@ -65,7 +65,7 @@ function calculateHoursFromTimeRange(start: string, end: string): number {
   const endDate = new Date(0, 0, 0, endHour, endMinute);
   let diff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
   if (diff < 0) diff = 0;
-  return diff;
+  return Math.round(diff * 100) / 100; // Round to 2 decimal places
 }
 
 function TimesheetTable({
@@ -87,8 +87,20 @@ function TimesheetTable({
   readOnly?: boolean;
   hasWeekendPermission?: boolean;
 }) {
-  // Calculate daily totals from the project's individual day hours
+  // Calculate daily totals from time ranges (in/out time)
   const dailyTotals = weekDays.reduce((totals, day) => {
+    const dateStr = format(day, "yyyy-MM-dd");
+    const timeRange = timeRanges[dateStr];
+    if (timeRange && timeRange.start && timeRange.end) {
+      totals[dateStr] = calculateHoursFromTimeRange(timeRange.start, timeRange.end);
+    } else {
+      totals[dateStr] = 0;
+    }
+    return totals;
+  }, {} as { [key: string]: number });
+
+  // Calculate project totals for validation
+  const projectTotals = weekDays.reduce((totals, day) => {
     const dateStr = format(day, "yyyy-MM-dd");
     totals[dateStr] = timeEntries.reduce((sum, entry) => {
       return sum + (entry.hours[dateStr] || 0);
@@ -135,22 +147,27 @@ function TimesheetTable({
                   const isWeekendDay = isWeekend(day);
                   const isDisabled = isWeekendDay && !hasWeekendPermission;
                   const hours = projectEntry?.hours[dateStr] || "";
+                  const dailyLimit = dailyTotals[dateStr] || 0;
+                  const currentProjectTotal = projectTotals[dateStr] || 0;
+                  const otherProjectsTotal = currentProjectTotal - (projectEntry?.hours[dateStr] || 0);
+                  const maxAllowed = Math.max(0, dailyLimit - otherProjectsTotal);
+
                   return (
                     <td key={dateStr} className="border p-2">
                       <input
                         type="number"
                         min="0"
-                        max="24"
+                        max={dailyLimit > 0 ? maxAllowed.toString() : "24"}
                         step="0.5"
-                        className={`w-16 p-1 border rounded ${
-                          readOnly || isDisabled ? "bg-gray-100" : ""
-                        } ${isWeekendDay ? "bg-muted/50" : ""}`}
+                        className={`w-16 p-1 border rounded ${readOnly || isDisabled ? "bg-gray-100" : ""
+                          } ${isWeekendDay ? "bg-muted/50" : ""}`}
                         value={hours}
                         onChange={(e) =>
-                          onTimeChange(project.id, dateStr, Number(e.target.value))
+                          onTimeChange(project.id, dateStr, Math.round(Number(e.target.value) * 100) / 100)
                         }
                         readOnly={readOnly || isDisabled}
                         disabled={isDisabled}
+                        title={dailyLimit > 0 ? `Maximum allowed: ${maxAllowed.toFixed(2)} hours (Daily limit: ${dailyLimit.toFixed(2)})` : ""}
                       />
                     </td>
                   );
@@ -163,19 +180,25 @@ function TimesheetTable({
             <td className="border p-2 font-bold">Daily Total</td>
             {weekDays.map((day) => {
               const dateStr = format(day, "yyyy-MM-dd");
-              const dailyTotal = dailyTotals[dateStr];
-              const isOvertime = dailyTotal > 8;
+              const calculatedTotal = dailyTotals[dateStr] || 0;
+              const projectTotal = projectTotals[dateStr] || 0;
+              const isOvertime = projectTotal > calculatedTotal;
+              const isUndertime = projectTotal < calculatedTotal && calculatedTotal > 0;
               return (
                 <td
                   key={dateStr}
-                  className={`border p-2 font-bold ${isOvertime ? "text-red-600" : ""}`}
+                  className={`border p-2 font-bold ${
+                    isOvertime ? "text-red-600" : 
+                    isUndertime ? "text-yellow-600" : 
+                    "text-green-600"
+                  }`}
                 >
-                  {dailyTotal || 0}
+                  {projectTotal.toFixed(2)} / {calculatedTotal.toFixed(2)}
                 </td>
               );
             })}
             <td className="border p-2 font-bold">
-              {Object.values(dailyTotals).reduce((sum, hours) => sum + hours, 0)}
+              {Object.values(projectTotals).reduce((sum, hours) => sum + hours, 0).toFixed(2)} / {Object.values(dailyTotals).reduce((sum, hours) => sum + hours, 0).toFixed(2)}
             </td>
           </tr>
           <tr className="bg-muted/10">
@@ -250,9 +273,9 @@ export default function Home() {
   });
 
   const { data: initialProject } = useQuery({
-    queryKey: ["project", resourceData?.projectID],
-    queryFn: () => ProjectApi.fetchProject(resourceData.projectID),
-    enabled: !!resourceData?.projectID,
+    queryKey: ["project", resourceData?.data.projectID],
+    queryFn: () => ProjectApi.fetchProject(resourceData?.data.projectID),
+    enabled: !!resourceData?.data.projectID,
   });
 
   const { data: availableProjects } = useQuery<ProjectType[]>({
@@ -270,7 +293,8 @@ export default function Home() {
     weekStartsOn: 1,
   });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-  const isFutureWeek = isAfter(startDate, startOfToday());
+  const futurestartDate = startOfWeek(addDays(startDate, 7), { weekStartsOn: 1 })
+  const isFutureWeek = isAfter(futurestartDate, startOfToday());
 
   const availableProjectsToAdd = availableProjects?.filter(
     (availableProject) => !projects.some((p) => p.id === availableProject.id)
@@ -302,7 +326,7 @@ export default function Home() {
       }
     });
     setTimeRanges(updatedTimeRanges);
-  
+
     // Now compute new timeEntries based on the updated timeRanges
     const newEntries = projects.map((project) => ({
       projectId: project.id,
@@ -323,12 +347,34 @@ export default function Home() {
 
   // When a user manually changes hours for a project on a given day.
   const handleTimeChange = (projectId: string, date: string, hours: number) => {
+    // Round to 2 decimal places
+    const roundedHours = Math.round(hours * 100) / 100;
+    
+    // Get daily limit from time range
+    const timeRange = timeRanges[date];
+    let dailyLimit = 0;
+    if (timeRange && timeRange.start && timeRange.end) {
+      dailyLimit = calculateHoursFromTimeRange(timeRange.start, timeRange.end);
+    }
+    
+    // Calculate current total for other projects on this date
+    const otherProjectsTotal = timeEntries
+      .filter(entry => entry.projectId !== projectId)
+      .reduce((sum, entry) => sum + (entry.hours[date] || 0), 0);
+    
+    // Check if the new hours would exceed daily limit
+    if (dailyLimit > 0 && (roundedHours + otherProjectsTotal) > dailyLimit) {
+      const maxAllowed = Math.max(0, dailyLimit - otherProjectsTotal);
+      toast.error(`Cannot exceed daily limit of ${dailyLimit.toFixed(2)} hours. Maximum allowed for this project: ${maxAllowed.toFixed(2)} hours`);
+      return;
+    }
+
     setTimeEntries((prev) => {
       const projectEntry =
         prev.find((entry) => entry.projectId === projectId) || { projectId, hours: {} };
       const updatedEntry = {
         ...projectEntry,
-        hours: { ...projectEntry.hours, [date]: hours },
+        hours: { ...projectEntry.hours, [date]: roundedHours },
       };
       return [...prev.filter((entry) => entry.projectId !== projectId), updatedEntry];
     });
@@ -344,12 +390,24 @@ export default function Home() {
       const { start, end } = newRanges[date] || {};
       if (start && end) {
         const computedHours = calculateHoursFromTimeRange(start, end);
-        // Update every project's hours for the given date.
+        // When time range changes, redistribute hours proportionally if they exceed the new limit
         setTimeEntries((prevEntries) =>
-          prevEntries.map((entry) => ({
-            ...entry,
-            hours: { ...entry.hours, [date]: computedHours },
-          }))
+          prevEntries.map((entry) => {
+            const currentHours = entry.hours[date] || 0;
+            const totalCurrentHours = prevEntries.reduce((sum, e) => sum + (e.hours[date] || 0), 0);
+            
+            // If total exceeds new limit, proportionally reduce
+            if (totalCurrentHours > computedHours && computedHours > 0) {
+              const proportion = computedHours / totalCurrentHours;
+              const newHours = Math.round(currentHours * proportion * 100) / 100;
+              return {
+                ...entry,
+                hours: { ...entry.hours, [date]: newHours },
+              };
+            }
+            
+            return entry;
+          })
         );
       }
       return newRanges;
@@ -359,12 +417,12 @@ export default function Home() {
   // When the week changes (or on initial load), fetch timesheet data.
   useEffect(() => {
     async function fetchTimesheet() {
-      if (resourceData?.id && !isFutureWeek) {
+      if (resourceData?.data.id) {
         const weekStartStr = format(startDate, "yyyy-MM-dd");
-        console.log("Fetching timesheet for", resourceData.id, weekStartStr);
+        console.log("Fetching timesheet for", resourceData.data.id, weekStartStr);
         try {
           const response = await api.get(
-            `/Timesheet/timesheet/${resourceData.id}/${weekStartStr}`
+            `/Timesheet/timesheet/${resourceData.data.id}/${weekStartStr}`
           );
           console.log("Fetched timesheet:", response.data);
           if (response?.data) {
@@ -402,7 +460,7 @@ export default function Home() {
       }
     }
     fetchTimesheet();
-  },[resourceData, currentWeekOffset]);
+  }, [resourceData, currentWeekOffset]);
 
   // Mutation for saving/updating the timesheet.
   const saveOrUpdateTimesheetMutation = useMutation({
@@ -435,16 +493,15 @@ export default function Home() {
       }, 0);
       return total + dayTotal;
     }, 0);
-    
 
     return {
       id: timesheetData?.id || 0,
-      resourceID: resourceData?.id || 0,
+      resourceID: resourceData?.data.id || 0,
       totalHours: 40,
       workedHours: parseFloat(totalHours.toFixed(2)),
       status: "pending",
-      pmid: resourceData?.pmid,
-      rmid: resourceData?.rmid,
+      pmid: resourceData?.data.pmid,
+      rmid: resourceData?.data.rmid,
       isActive: true,
       isNotified: true,
       isSubmit: false, // to be set later in handlers
@@ -516,7 +573,7 @@ export default function Home() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">
-              Weekly Timesheet - {resourceData?.firstName} {resourceData?.lastName}
+              Weekly Attendace - {resourceData?.data.firstName} {resourceData?.data.lastName}
             </CardTitle>
             <div className="flex gap-4">
               <Button variant="outline" onClick={() => handleWeekChange(currentWeekOffset - 1)}>
@@ -532,69 +589,70 @@ export default function Home() {
           </div>
         </CardHeader>
         <CardContent>
-              <div className="mb-4 flex justify-between items-center">
-                <div className="flex gap-2">
-                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" disabled={!availableProjectsToAdd?.length}>
-                        <PlusCircle className="w-4 h-4 mr-2" />
+          <div className="mb-4 flex justify-between items-center">
+            <div className="flex gap-2">
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" disabled={!availableProjectsToAdd?.length}>
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    Add Project
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Project to Timesheet</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableProjectsToAdd?.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="mt-4 flex justify-end">
+                      <Button onClick={handleAddProject} disabled={!selectedProjectId}>
                         Add Project
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Project to Timesheet</DialogTitle>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a project" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableProjectsToAdd?.map((project) => (
-                              <SelectItem key={project.id} value={project.id}>
-                                {project.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="mt-4 flex justify-end">
-                          <Button onClick={handleAddProject} disabled={!selectedProjectId}>
-                            Add Project
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button onClick={handleAutoFill} variant="outline">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Auto Fill
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSaveDraft} variant="default" disabled={!isEditableWeek}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Timesheet
-                  </Button>
-                  {isFridayFilled && (
-                    <Button onClick={handleSubmit} variant="default"  disabled={!isEditableWeek}>
-                      <Lock className="w-4 h-4 mr-2" />
-                      Submit Timesheet
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <TimesheetTable
-                projects={projects}
-                timeEntries={timeEntries}
-                timeRanges={timeRanges}
-                weekDays={weekDays}
-                onTimeChange={handleTimeChange}
-                onTimeRangeChange={handleTimeRangeChange}
-                hasWeekendPermission={hasWeekendPermission}
-              />
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button onClick={handleAutoFill} variant="outline">
+                <Clock className="w-4 h-4 mr-2" />
+                Auto Fill
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSaveDraft} variant="default" disabled={!isEditableWeek}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Timesheet
+              </Button>
+              {isFridayFilled && (
+                <Button onClick={handleSubmit} variant="default" disabled={!isEditableWeek}>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Submit Timesheet
+                </Button>
+              )}
+            </div>
+          </div>
+          <TimesheetTable
+            projects={projects}
+            timeEntries={timeEntries}
+            timeRanges={timeRanges}
+            weekDays={weekDays}
+            onTimeChange={handleTimeChange}
+            onTimeRangeChange={handleTimeRangeChange}
+            hasWeekendPermission={hasWeekendPermission}
+          />
         </CardContent>
       </Card>
     </div>
   );
 }
+
