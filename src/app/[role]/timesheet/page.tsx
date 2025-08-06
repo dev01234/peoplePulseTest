@@ -168,7 +168,7 @@ function TimesheetTable({
                           onTimeChange(project.id, dateStr, Math.round(Number(e.target.value) * 100) / 100)
                         }
                         readOnly={readOnly || isDisabled || isFutureDate}
-                        disabled={isDisabled || isFutureDate}
+                        disabled={readOnly || isDisabled || isFutureDate}
                         title={dailyLimit > 0 ? `Maximum allowed: ${maxAllowed.toFixed(2)} hours (Daily limit: ${dailyLimit.toFixed(2)})` : ""}
                       />
                     </td>
@@ -213,7 +213,7 @@ function TimesheetTable({
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "start", e.target.value)
                     }
-                    disabled={isDisabled || isFutureDate}
+                    disabled={readOnly || isDisabled || isFutureDate}
                   />
                 </td>
               );
@@ -237,7 +237,7 @@ function TimesheetTable({
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "end", e.target.value)
                     }
-                    disabled={isDisabled || isFutureDate}
+                    disabled={readOnly || isDisabled || isFutureDate}
                   />
                 </td>
               );
@@ -292,6 +292,8 @@ export default function Home() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   const futurestartDate = startOfWeek(addDays(startDate, 7), { weekStartsOn: 1 })
   const isFutureWeek = isAfter(futurestartDate, startOfToday());
+  const isPreviousWeek = currentWeekOffset < 0;
+  const isCurrentWeek = currentWeekOffset === 0;
 
   const availableProjectsToAdd = availableProjects?.filter(
     (availableProject) => !projects.some((p) => p.id === availableProject.id)
@@ -306,40 +308,6 @@ export default function Home() {
         setDialogOpen(false);
       }
     }
-  };
-
-  // Auto-fill uses the time range (if provided) to calculate the hours.
-  const handleAutoFill = () => {
-    // Create a new timeRanges object that fills in defaults for any missing values
-    const updatedTimeRanges: TimeRange = { ...timeRanges };
-    weekDays.forEach((day) => {
-      const dateStr = format(day, "yyyy-MM-dd");
-      if (
-        !updatedTimeRanges[dateStr] ||
-        !updatedTimeRanges[dateStr].start ||
-        !updatedTimeRanges[dateStr].end
-      ) {
-        updatedTimeRanges[dateStr] = { start: "09:00", end: "17:00" };
-      }
-    });
-    setTimeRanges(updatedTimeRanges);
-
-    // Now compute new timeEntries based on the updated timeRanges
-    const newEntries = projects.map((project) => ({
-      projectId: project.id,
-      hours: weekDays.reduce((acc, day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
-        const { start, end } = updatedTimeRanges[dateStr];
-        let value = calculateHoursFromTimeRange(start, end);
-        // If it's a weekend and there's no weekend permission, set hours to 0.
-        if (isWeekend(day) && !hasWeekendPermission) {
-          value = "";
-        }
-        acc[dateStr] = value;
-        return acc;
-      }, {} as { [key: string]: number }),
-    }));
-    setTimeEntries(newEntries);
   };
 
   // When a user manually changes hours for a project on a given day.
@@ -590,7 +558,7 @@ export default function Home() {
             <div className="flex gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" disabled={!availableProjectsToAdd?.length}>
+                  <Button variant="outline" disabled={!availableProjectsToAdd?.length || !isCurrentWeek}>
                     <PlusCircle className="w-4 h-4 mr-2" />
                     Add Project
                   </Button>
@@ -620,18 +588,14 @@ export default function Home() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <Button onClick={handleAutoFill} variant="outline">
-                <Clock className="w-4 h-4 mr-2" />
-                Auto Fill
-              </Button>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleSaveDraft} variant="default" disabled={!isEditableWeek}>
+              <Button onClick={handleSaveDraft} variant="default" disabled={!isCurrentWeek}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Timesheet
               </Button>
               {isFridayFilled && (
-                <Button onClick={handleSubmit} variant="default" disabled={!isEditableWeek}>
+                <Button onClick={handleSubmit} variant="default" disabled={!isCurrentWeek}>
                   <Lock className="w-4 h-4 mr-2" />
                   Submit Timesheet
                 </Button>
@@ -645,6 +609,7 @@ export default function Home() {
             weekDays={weekDays}
             onTimeChange={handleTimeChange}
             onTimeRangeChange={handleTimeRangeChange}
+            readOnly={!isCurrentWeek}
             hasWeekendPermission={hasWeekendPermission}
           />
         </CardContent>
@@ -652,4 +617,3 @@ export default function Home() {
     </div>
   );
 }
-
