@@ -168,7 +168,7 @@ function TimesheetTable({
                           onTimeChange(project.id, dateStr, Math.round(Number(e.target.value) * 100) / 100)
                         }
                         readOnly={readOnly || isDisabled || isFutureDate}
-                        disabled={readOnly || isDisabled || isFutureDate}
+                        disabled={isDisabled || isFutureDate}
                         title={dailyLimit > 0 ? `Maximum allowed: ${maxAllowed.toFixed(2)} hours (Daily limit: ${dailyLimit.toFixed(2)})` : ""}
                       />
                     </td>
@@ -213,7 +213,7 @@ function TimesheetTable({
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "start", e.target.value)
                     }
-                    disabled={readOnly || isDisabled || isFutureDate}
+                    disabled={isDisabled || isFutureDate}
                   />
                 </td>
               );
@@ -237,7 +237,7 @@ function TimesheetTable({
                     onChange={(e) =>
                       onTimeRangeChange(dateStr, "end", e.target.value)
                     }
-                    disabled={readOnly || isDisabled || isFutureDate}
+                    disabled={isDisabled || isFutureDate}
                   />
                 </td>
               );
@@ -292,8 +292,6 @@ export default function Home() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
   const futurestartDate = startOfWeek(addDays(startDate, 7), { weekStartsOn: 1 })
   const isFutureWeek = isAfter(futurestartDate, startOfToday());
-  const isPreviousWeek = currentWeekOffset < 0;
-  const isCurrentWeek = currentWeekOffset === 0;
 
   const availableProjectsToAdd = availableProjects?.filter(
     (availableProject) => !projects.some((p) => p.id === availableProject.id)
@@ -558,7 +556,7 @@ export default function Home() {
             <div className="flex gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" disabled={!availableProjectsToAdd?.length || !isCurrentWeek}>
+                  <Button variant="outline" disabled={!availableProjectsToAdd?.length}>
                     <PlusCircle className="w-4 h-4 mr-2" />
                     Add Project
                   </Button>
@@ -590,12 +588,12 @@ export default function Home() {
               </Dialog>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleSaveDraft} variant="default" disabled={!isCurrentWeek}>
+              <Button onClick={handleSaveDraft} variant="default" disabled={!isEditableWeek}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Timesheet
               </Button>
               {isFridayFilled && (
-                <Button onClick={handleSubmit} variant="default" disabled={!isCurrentWeek}>
+                <Button onClick={handleSubmit} variant="default" disabled={!isEditableWeek}>
                   <Lock className="w-4 h-4 mr-2" />
                   Submit Timesheet
                 </Button>
@@ -609,7 +607,6 @@ export default function Home() {
             weekDays={weekDays}
             onTimeChange={handleTimeChange}
             onTimeRangeChange={handleTimeRangeChange}
-            readOnly={!isCurrentWeek}
             hasWeekendPermission={hasWeekendPermission}
           />
         </CardContent>
